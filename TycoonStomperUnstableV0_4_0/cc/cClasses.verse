@@ -352,11 +352,11 @@ TWC_unique_prop<public>:=class<unique><concrete>(SuperClassInaugurable):
 
     SwitchToRed<public>()<transacts><decides>:void=
         PropToChange := props[Color_Change_Index]
-        PropToChange.SetMaterial(MI_Simple_PureRed_Flat_Inst, ?Index:=Material_Change_Index)
+        PropToChange.SetMaterial(MI_Simple_PureRed_Flat_Inst{}, ?Index:=Material_Change_Index)
 
     SwitchToGreen<public>()<transacts><decides>:void=
         PropToChange := props[Color_Change_Index]
-        PropToChange.SetMaterial(MI_Simple_PureGreen_Flat_Inst, ?Index:=Material_Change_Index)
+        PropToChange.SetMaterial(MI_Simple_PureGreen_Flat_Inst{}, ?Index:=Material_Change_Index)
     
     Hide<public>(Anim:animation_main):void=
         for:

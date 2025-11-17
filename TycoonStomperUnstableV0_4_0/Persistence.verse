@@ -80,12 +80,14 @@ RemoveRebirth(P:player, CoreSaveID:int)<transacts>:void=
             EstablishedSave := Map.CoreSaves[CoreSaveID]
             
             NewSave := core_save:
-                MakeCoreSave<constructor>(EstablishedSave)
                 Rebirths:=EstablishedSave.Rebirths-1
+                MakeCoreSave<constructor>(EstablishedSave)
+                
 
             set PlayerProfileDataMap[P] = player_profile_data:
-                MakePlayerProfileData<constructor>(Map)
                 CoreSaves:=ChangeCoreSave(Map.CoreSaves, CoreSaveID, NewSave)
+                MakePlayerProfileData<constructor>(Map)
+                
 
             
 
@@ -102,12 +104,14 @@ Rebirth(P:player, CoreSaveID:int)<transacts>:void=
             EstablishedSave := Map.CoreSaves[CoreSaveID]
             
             NewSave := core_save:
-                MakeCoreSave<constructor>(EstablishedSave)
                 Rebirths:=EstablishedSave.Rebirths+1
+                MakeCoreSave<constructor>(EstablishedSave)
+                
 
             set PlayerProfileDataMap[P] = player_profile_data:
-                MakePlayerProfileData<constructor>(Map)
                 CoreSaves:=ChangeCoreSave(Map.CoreSaves, CoreSaveID, NewSave)
+                MakePlayerProfileData<constructor>(Map)
+                
 
             
 
@@ -122,13 +126,15 @@ DelidCurrencies(P:player, CoreSaveID:int)<transacts><decides>:void=
     then:
         EstablishedSave := Map.CoreSaves[CoreSaveID]
         NewSave := core_save:
-            MakeCoreSave<constructor>(EstablishedSave)
             AssociatedCurrencies := DelidMap
+            MakeCoreSave<constructor>(EstablishedSave)
+            
 
 
         set PlayerProfileDataMap[P] = player_profile_data:
-            MakePlayerProfileData<constructor>(Map)
             CoreSaves:=ChangeCoreSave(Map.CoreSaves, CoreSaveID, NewSave)
+            MakePlayerProfileData<constructor>(Map)
+            
         
 
 DelidUnlocks(P:player, CoreSaveID:int)<transacts><decides>:void=
@@ -139,13 +145,15 @@ DelidUnlocks(P:player, CoreSaveID:int)<transacts><decides>:void=
 
         EstablishedSave := Map.CoreSaves[CoreSaveID]
         NewSave := core_save:
-            MakeCoreSave<constructor>(EstablishedSave)
             AssociatedUnlocks := DelidMap
+            MakeCoreSave<constructor>(EstablishedSave)
+            
 
 
         set PlayerProfileDataMap[P] = player_profile_data:
-            MakePlayerProfileData<constructor>(Map)
             CoreSaves:=ChangeCoreSave(Map.CoreSaves, CoreSaveID, NewSave)
+            MakePlayerProfileData<constructor>(Map)
+            
 
 #Updates the associated currencies for a player
 UpdateAssociatedCurrencies(P:player, CurrencyKey:int, CurrencyValue:int, CoreSaveID:int)<transacts>:void=
@@ -159,12 +167,14 @@ UpdateAssociatedCurrencies(P:player, CurrencyKey:int, CurrencyValue:int, CoreSav
         set PastCurrency[CurrencyKey] = CurrencyValue
 
         NewSave := core_save:
-            MakeCoreSave<constructor>(EstablishedSave)
             AssociatedCurrencies := PastCurrency
+            MakeCoreSave<constructor>(EstablishedSave)
+            
 
         set PlayerProfileDataMap[P] = player_profile_data:
-            MakePlayerProfileData<constructor>(Map)
             CoreSaves:=ChangeCoreSave(Map.CoreSaves, CoreSaveID, NewSave)
+            MakePlayerProfileData<constructor>(Map)
+            
 
 
 UpdateAssociatedUnlocks(P:player, KeyType:PurchaseableType, Index:int, CoreSaveID:int)<transacts>:void=
@@ -174,12 +184,14 @@ UpdateAssociatedUnlocks(P:player, KeyType:PurchaseableType, Index:int, CoreSaveI
 
         EstablishedSave := Map.CoreSaves[CoreSaveID]
         NewSave := core_save:
-            MakeCoreSave<constructor>(EstablishedSave)
             AssociatedUnlocks := Map.CoreSaves[CoreSaveID].AssociatedUnlocks + array{(KeyType, Index)}
+            MakeCoreSave<constructor>(EstablishedSave)
+            
 
         set PlayerProfileDataMap[P] = player_profile_data:
-            MakePlayerProfileData<constructor>(Map)
             CoreSaves:=ChangeCoreSave(Map.CoreSaves, CoreSaveID, NewSave)
+            MakePlayerProfileData<constructor>(Map)
+            
             
                 
 
@@ -192,12 +204,14 @@ UpdateXP(P:player, XP:int, CoreSaveID:int)<transacts>:void=
 
         EstablishedSave := Map.CoreSaves[CoreSaveID]
         NewSave := core_save:
-            MakeCoreSave<constructor>(EstablishedSave)
             Experience := XP
+            MakeCoreSave<constructor>(EstablishedSave)
+            
 
         set PlayerProfileDataMap[P] = player_profile_data:
-            MakePlayerProfileData<constructor>(Map)
             CoreSaves:=ChangeCoreSave(Map.CoreSaves, CoreSaveID, NewSave)
+            MakePlayerProfileData<constructor>(Map)
+            
 #Gets the associated currencies for a player
 GetStats(Agent:agent)<decides><transacts>:player_profile_data=
 {

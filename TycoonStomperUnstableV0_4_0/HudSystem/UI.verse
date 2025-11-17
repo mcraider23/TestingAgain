@@ -208,7 +208,7 @@ currency_ui<public>:=class():
             Slots:=array:
                 canvas_slot:
                     Widget:=CurrencyStackBox
-                    Anchors:=anchors{Minimum:=vector2{X:=0.032625,Y:=0.271111}, Maximum:=vector2{X:=0.214375,Y:=0.271111}}
+                    Anchors:=anchors{Minimum:=vector2{X:=0.012625,Y:=0.291111}, Maximum:=vector2{X:=0.214375,Y:=0.271111}}
                     Offsets := margin{Bottom := FindBottom}
                     SizeToContent := false
         if:
