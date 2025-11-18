@@ -36,7 +36,16 @@ npc_buyable<public>:=class<concrete><final>(purchaseable):
 
         
 unique_npc_spawner<public>:=class<concrete>(Toggleable, Inaugurable):
+    
+    # Choose which spawner type to use
+    @editable var UseCreatureSpawner : logic = false
+    
+    # NPC Spawner (original)
     @editable var NPCSpawner : npc_spawner_device = npc_spawner_device{}
+    
+    # Creature Spawner (new option)
+    @editable var CreatureSpawner : creature_spawner_device = creature_spawner_device{}
+    
     @editable var CurrencyOnKillID  : int = {0}
     @editable var OnKillGrantAmount : int = {0}
     @editable var OnKillExperienceAmount : int = {0}
@@ -44,12 +53,26 @@ unique_npc_spawner<public>:=class<concrete>(Toggleable, Inaugurable):
     
     OnKill : event(agent) = event(agent){}
 
-    Disable<override>():void={NPCSpawner.Disable()}
-    Enable<override>():void={NPCSpawner.Enable()}
+    Disable<override>():void=
+        if (UseCreatureSpawner?):
+            CreatureSpawner.Disable()
+        else:
+            NPCSpawner.Disable()
+    
+    Enable<override>():void=
+        if (UseCreatureSpawner?):
+            CreatureSpawner.Enable()
+        else:
+            NPCSpawner.Enable()
 
-    Initialize<override>(Base:base):void={NPCSpawner.Disable(); spawn{AwaitKill()}}
+    Initialize<override>(Base:base):void=
+        Disable()
+        if (UseCreatureSpawner?):
+            spawn{AwaitCreatureKill()}
+        else:
+            spawn{AwaitNPCKill()}
 
-    AwaitKill()<suspends>:void=
+    AwaitNPCKill()<suspends>:void=
         loop:
             PreventInf();
             InteractionResult := NPCSpawner.EliminatedEvent.Await()
@@ -57,12 +80,12 @@ unique_npc_spawner<public>:=class<concrete>(Toggleable, Inaugurable):
                 Agent := InteractionResult.Source?
             then:
                 OnKill.Signal(Agent)
-                
 
-                
-
-
-
-
-
-
+    AwaitCreatureKill()<suspends>:void=
+        loop:
+            PreventInf();
+            InteractionResult := CreatureSpawner.EliminatedEvent.Await()
+            if:
+                Agent := InteractionResult.Source?
+            then:
+                OnKill.Signal(Agent)

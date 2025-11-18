@@ -120,6 +120,10 @@ purchaseable<public>:=class<abstract>(Detailable, Hostable, SuperInaugurable, Re
 
     OnRebirth<override>():void=
         RebirthedEvent.Signal()
+        
+        # FIXED: Reset all prop visibility states BEFORE lock/unlock logic
+        ResetAllPropsVisibility()
+        
         if(InitialStatus = Dependency.Unlocked){Unlock()}
         if(InitialStatus = Dependency.Locked){Lock()}
 
@@ -139,6 +143,25 @@ purchaseable<public>:=class<abstract>(Detailable, Hostable, SuperInaugurable, Re
             InitializeChildren(Owner, MyIndex)
         else:
             GlobalSuperlog("{Name} is locked. Not initializing children... --->> Awaiting until unlocked.")
+
+    ResetAllPropsVisibility():void=
+        for(TWC : PropsV2)
+        {
+            for(OriginProp : TWC.OriginProps)
+            {
+                if(TWC.HideOnGameStart?)
+                {
+                    set OriginProp.Visibility = LogicalVisibilityStatus.Hidden
+                    OriginProp.prop.Hide()
+                }
+                else
+                {
+                    set OriginProp.Visibility = LogicalVisibilityStatus.Shown
+                    OriginProp.prop.Show()
+                }
+            }
+            # Don't call TWC.Hide() or TWC.Show() - just handle the props directly above
+        }
 
     #Prints the item's details
     Detail<override>(Type:string)<transacts>:void=
@@ -219,28 +242,25 @@ purchaseable<public>:=class<abstract>(Detailable, Hostable, SuperInaugurable, Re
             
 
     ManageTWC(TWC:TWC_unique_prop)<suspends>:void=
-        race:
-            sync: 
-                ManagePrePurchasePropSet(TWC)
-                ManagePostPurchaseSet(TWC)
-            RebirthedEvent.Await()
-
-           
-    ManagePostPurchaseSet<public>(TWC:TWC_unique_prop)<suspends>:void=
-        race:
-            block:
+        loop:  # <-- Add loop here so it restarts after rebirth
+            race:
+                sync: 
+                    ManagePrePurchasePropSet(TWC)
+                    ManagePostPurchaseSet(TWC)
                 RebirthedEvent.Await()
-            block:
-                BegunHosting.Await()
-                case(TWC.OnPurchaseFunction)
-                {
-                PurchaseMovementType.Nothing =>
-                    return
-                PurchaseMovementType.Show =>
-                    TWC.Show(AnimationConfig)
-                PurchaseMovementType.Hide =>
-                    TWC.Hide(AnimationConfig)
-                }
+
+    ManagePostPurchaseSet<public>(TWC:TWC_unique_prop)<suspends>:void=
+        loop:  # <-- Add loop here
+            BegunHosting.Await()
+            case(TWC.OnPurchaseFunction)
+            {
+            PurchaseMovementType.Nothing =>
+                {}  # <-- Change return to empty block
+            PurchaseMovementType.Show =>
+                TWC.Show(AnimationConfig)
+            PurchaseMovementType.Hide =>
+                TWC.Hide(AnimationConfig)
+            }
 
                         
     ManagePrePurchasePropSet<public>(TWC:TWC_unique_prop)<suspends>:void=
@@ -768,12 +788,6 @@ fxpurchaseable<public>:=class<abstract>(purchaseable, ExpandedFX):
     #Custom class methods
     AsyncPlayFX(Time:float)<suspends>:void={PlayFX(); Sleep(Time); StopFX(); return}
 
-
-
-        
-
-
-        
 
             
     

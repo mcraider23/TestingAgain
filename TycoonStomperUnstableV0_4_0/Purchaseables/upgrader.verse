@@ -23,17 +23,9 @@ purchaseable_upgrader<public>:=class<concrete>(purchaseable):
         Detail("purchaseable_waypointable")
 
         WaypointableConfig.Initialize(Self)
-
-
-    
-    
-
     
     #Runs after the item is bought
     Host<override>()<suspends>:void=
-        var S:int = 1
-
-        
         block:
             if:
                 Owner := MaybeOwner?
@@ -47,13 +39,9 @@ purchaseable_upgrader<public>:=class<concrete>(purchaseable):
     OnRebirth<override>():void=
         (super:)OnRebirth()
 
+        # Upgraders don't spawn props, just unlink
         if:
             Waypoint := iWaypoint?
         then:
             Waypoint.Unlink(WaypointableConfig)
             set iWaypoint = {false}
-
-    
-
-
-        

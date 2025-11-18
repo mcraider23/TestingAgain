@@ -60,11 +60,12 @@ GrantMoney<public>(Base:base, Player:player, GrantID:int, Amount:int, Bypass:log
             Base.Players.Find[Player]
             Rebirths := GetCoreStats[Player, Base.Base_Setup.PersistenceCore].Rebirths
             CurrentValue := GetCoreStats[Player, Base.Base_Setup.PersistenceCore].AssociatedCurrencies[GrantID]
-            #Example with a rebirth multiplier of 1.5 and 100 as the base amount
-            #((1.5^0) * 100) = 100
-            #((1.5^1) * 100) = 150
-            #((1.5^2) * 100) = 225
-            #((1.5^3) * 100) = 337.5
+            # LINEAR REBIRTH CALCULATION: Each rebirth gives exactly 10% more income
+            # 0 rebirths = 100 (base)
+            # 1 rebirth = 110 (+10%)
+            # 2 rebirths = 120 (+20%)
+            # 3 rebirths = 130 (+30%)
+            # Formula: Amount * (1.0 + (Rebirths * 0.1))
             AmountToGrant := GetRebirthAmount[Base, Rebirths, Amount]
         then:
             Base.MoneyGranted.Signal(Player, GrantID, Amount)
@@ -84,18 +85,10 @@ BypassedGrantMoney<public>(Base:base, Player:player, GrantID:int, Amount:int):vo
         Base.Players.Find[Player]
         Rebirths := GetCoreStats[Player, Base.Base_Setup.PersistenceCore].Rebirths
         CurrentValue := GetCoreStats[Player, Base.Base_Setup.PersistenceCore].AssociatedCurrencies[GrantID]
-        #Example with a rebirth multiplier of 1.5 and 100 as the base amount
-        #((1.5^0) * 100) = 100
-        #((1.5^1) * 100) = 150
-        #((1.5^2) * 100) = 225
-        #((1.5^3) * 100) = 337.5
         AmountToGrant := GetRebirthAmount[Base, Rebirths, Amount]
     then:
         UpdateAssociatedCurrencies(Player, GrantID, AmountToGrant+CurrentValue, Base.Base_Setup.PersistenceCore)
         Base.MoneyGranted.Signal(Player, GrantID, Amount)
-
-        
-
 
 RemoveMoney<public>(Base:base, Player:player, GrantID:int, Amount:int)<transacts>:void=
     if:
@@ -105,11 +98,16 @@ RemoveMoney<public>(Base:base, Player:player, GrantID:int, Amount:int)<transacts
         #If the currency does not have the zone, then update the associated currencies instantly
             UpdateAssociatedCurrencies(Player, GrantID, CurrentValue-Amount, Base.Base_Setup.PersistenceCore)
 
-        
-
-
+# UPDATED: Linear rebirth calculation - each rebirth gives exactly 10% more income
 GetRebirthAmount<public>(Base:base, Rebirths:int, Amount:int)<decides><transacts>:int=
-    return Round[(Pow(Base.Base_Setup.RebirthConfig.RebirthCashMultiplier, Rebirths*1.0) * Amount)]
+    # Linear calculation: Amount * (1.0 + (Rebirths * 0.1))
+    # 0 rebirths: 100 * 1.0 = 100
+    # 1 rebirth: 100 * 1.1 = 110
+    # 2 rebirths: 100 * 1.2 = 120
+    # 3 rebirths: 100 * 1.3 = 130
+    # etc.
+    Multiplier := 1.0 + (Rebirths * 0.1)
+    return Round[Amount * Multiplier]
 
 GetRebirthCostAmount<public>(Base:base, Rebirths:int)<decides><transacts>:int=
     return Round[(Pow(Base.Base_Setup.RebirthConfig.RebirthCostMultiplier, Rebirths*1.0) * Base.Base_Setup.RebirthConfig.RebirthCost)]

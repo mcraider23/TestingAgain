@@ -37,6 +37,8 @@ dancefloor_buyable<public>:=class<concrete><final>(purchaseable):
                 Sleep(dancefloorconfig.EmoteGrantInterval)
                 GrantMoney(Owner, Player, dancefloorconfig.CurrencyOnEmoteID, dancefloorconfig.OnEmoteIntervalGrantAmount, BypassZone)
                 GrantXP(Owner, Player, dancefloorconfig.OnEmoteIntervalExperienceAmount)
+                # Award accolade for XP while emoting
+                dancefloorconfig.OnEmoteAccolade.Award(Player)
                 HudConfig.OnSuccessfullPlayer(Player)
 
 unique_dancefloor_buyable:=class<concrete>(Toggleable, Inaugurable):
@@ -50,7 +52,11 @@ unique_dancefloor_buyable:=class<concrete>(Toggleable, Inaugurable):
     #The amount of experience that will be granted to the player when the NPC is killed
     @editable var OnEmoteIntervalExperienceAmount : int = {0}
 
+    #Interval at which to grant money and XP while emoting
     @editable var EmoteGrantInterval : float = {0.5}
+    
+    #Accolades device to award XP when emoting on the dancefloor
+    @editable var OnEmoteAccolade : accolades_device = accolades_device{}
     
     #Shooting range target device that will be hit
     @editable var EmoteDetector : mutator_zone_device = mutator_zone_device{}
@@ -78,6 +84,3 @@ unique_dancefloor_buyable:=class<concrete>(Toggleable, Inaugurable):
             Player := EmoteDetector.AgentEndsEmotingEvent.Await()
             OnEmoteStop.Signal(Player)
     }
-
-
-

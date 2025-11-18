@@ -305,8 +305,14 @@ base<public>:=class<concrete><unique>(SuperInaugurable, Rebirthable, Runtime, St
     OnRebirth<override>():void=
         Owner.Config.Superlog("Attempting Rebirth")
 
+        # FIXED: Reset all purchaseables (this will reset their props)
         (GetPurchaseArray()).RebirthList(Self)
 
+        # FIXED: Reset all currencies (this will reset ATM money to 0)
+        for(Currency : Currencies)
+        {
+            Currency.OnRebirth()
+        }
 
         Base_Setup.PurchaseableConfigs.OnRebirth()
         set Status = ClaimStatus.Unclaimed
@@ -436,5 +442,4 @@ base<public>:=class<concrete><unique>(SuperInaugurable, Rebirthable, Runtime, St
                 "[FailureReason]"=>"{CFR.ToStr()}"
             }   
            
-
 

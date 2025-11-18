@@ -25,14 +25,14 @@ using {cc}
 ╚█████╔╝███████╗██║░░██║██████╔╝██████╔╝███████╗██████╔╝██╗░░╚██╔╝░░███████╗██║░░██║██████╔╝███████╗
 ░╚════╝░╚══════╝╚═╝░░╚═╝╚═════╝░╚═════╝░╚══════╝╚═════╝░╚═╝░░░╚═╝░░░╚══════╝╚═╝░░╚═╝╚═════╝░╚══════╝
 
-█▀▄ █▀▀ █░█ █▀▀ █░░ █▀█ █▀█ █▀▀ █▀▄   █▄▄ █▄█   ▀█▀ █▀ ▄▀█ █▀█
-█▄▀ ██▄ ▀▄▀ ██▄ █▄▄ █▄█ █▀▀ ██▄ █▄▀   █▄█ ░█░   ░█░ ▄█ █▀█ █▀▄
+█▀▄ █▀▀ █░█ █▀▀ █░░ █▀█ █▀█ █▀▀ █▀▄   █▄▄ █▄█   ▀█▀ █▀ ▄▀█ █▀█
+█▄▀ ██▄ ▀▄▀ ██▄ █▄▄ █▄█ █▀▀ ██▄ █▄▀   █▄█ ░█░   ░█░ ▄█ █▀█ █▀▄
 
-▄▀█ █░░ █░░   █▀█ █ █▀▀ █░█ ▀█▀ █▀   █▀█ █▀▀ █▀ █▀▀ █▀█ █░█ █▀▀ █▀▄
-█▀█ █▄▄ █▄▄   █▀▄ █ █▄█ █▀█ ░█░ ▄█   █▀▄ ██▄ ▄█ ██▄ █▀▄ ▀▄▀ ██▄ █▄▀
+▄▀█ █░░ █░░   █▀█ █ █▀▀ █░█ ▀█▀ █▀   █▀█ █▀▀ █▀ █▀▀ █▀█ █░█ █▀▀ █▀▄
+█▀█ █▄▄ █▄▄   █▀▄ █ █▄█ █▀█ ░█░ ▄█   █▀▄ ██▄ ▄█ ██▄ █▀▄ ▀▄▀ ██▄ █▄▀
 
-█▀▄ █▀█   █▄░█ █▀█ ▀█▀   █▀ █▀▀ █░░ █░░
-█▄▀ █▄█   █░▀█ █▄█ ░█░   ▄█ ██▄ █▄▄ █▄▄
+█▀▄ █▀█   █▄░█ █▀█ ▀█▀   █▀ █▀▀ █░░ █░░
+█▄▀ █▄█   █░▀█ █▄█ ░█░   ▄█ ██▄ █▄▄ █▄▄
 #>
 
 var UsingDebug<public>:weak_map(session, logic) = map{}
@@ -82,7 +82,8 @@ Super<public>:=module{
                                                                                                                                                         CurrencyValue<public>():void={Print("You are using Project OST Free Edition - it falls under a copyleft license.", ?Duration:=10.0, ?Color:=NamedColors.Gold)}
 }
 
-currency_config <public>:=class<concrete><unique>(Inaugurable, Detailable):
+# FIXED: Added Rebirthable interface to currency_config
+currency_config <public>:=class<concrete><unique>(Inaugurable, Detailable, Rebirthable):
     @editable var Name : string = ""
     @editable var Display : billboard_device = billboard_device{}
     @editable var MaybeCollectionZone : ?anyzone_or_atm = false
@@ -96,6 +97,12 @@ currency_config <public>:=class<concrete><unique>(Inaugurable, Detailable):
     
     Detail<override>(Type:string):void=
         Print("[== {Type} ==] \n Name: {Name}")
+
+    # FIXED: Reset AmountToClaim on rebirth
+    OnRebirth<override>():void=
+        set AmountToClaim = 0
+        Display.SetText(S2M("0"))
+        GlobalSuperlog("Currency {Name} reset to 0 on rebirth")
 
     Initialize<override>(Base:base):void=
         if(Zone := MaybeCollectionZone?){set CollectionZone = Zone}
@@ -428,7 +435,3 @@ custom_waypointable_config<public>:=class<concrete>():
 
     @editable var ConveyorID        <public> : int = 0
     @editable var WaypointID        <public> : int = 0
-
-
-
-

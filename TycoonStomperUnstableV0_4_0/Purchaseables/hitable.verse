@@ -58,6 +58,8 @@ hitable_buyable<public>:=class<concrete><final>(fxpurchaseable):
                     GrantMoney(Owner, Player, hitableConfig.CurrencyOnHitID, hitableConfig.OnHitGrantAmount, BypassZone)
                     GrantXP(Owner, Player, hitableConfig.OnHitExperienceAmount)
                     Granter.GrantItem(Player)
+                    # Award accolade for XP
+                    hitableConfig.OnHitAccolade.Award(Player)
                     if:
                         OHudConfig := hitableConfig.OverrideHudConfig?
                     then:
@@ -94,6 +96,9 @@ unique_hitable_buyable:=class<concrete>(Toggleable, Inaugurable):
     
     #The item granter device that will be granted to the player when the NPC is killed
     @editable var OptItemGranter : item_granter_device = {item_granter_device{}}
+
+    #Accolades device to award XP when the hitable is hit
+    @editable var OnHitAccolade : accolades_device = accolades_device{}
 
     #Shooting range target device that will be hit
     @editable var  hitdetectors : []trigger_device = array{}
@@ -135,6 +140,3 @@ unique_hitable_buyable:=class<concrete>(Toggleable, Inaugurable):
         then:
             OnHit.Signal(Agent)
     }
-
-
-

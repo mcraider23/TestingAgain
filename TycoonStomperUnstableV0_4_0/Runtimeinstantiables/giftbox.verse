@@ -66,9 +66,24 @@ giftbox_device := class<concrete>(Inaugurable):
     var GiftBoxDurationsPerAgent : [agent][]int = map{}
 
     var GiftBoxAnimationKeyFrames : []keyframe_delta = array{}
+    
+    # FIX 1: Store original transform to reset after rebirth
+    var OriginalPropTransform : ?transform = false
+    
+    # FIX 2: Prevent multiple tick loops from running
+    var TickLoopRunning : logic = false
 
     Initialize<override>(Base:base):void=
         GiftBoxButton.InteractedWithEvent.Subscribe(OnGiftBoxButtonInteracted)
+        
+        # FIX 1: Store the original transform when first initialized
+        if (not OriginalPropTransform?):
+            set OriginalPropTransform = option{GiftBoxProp.GetTransform()}
+        
+        # FIX 1: Reset prop to original transform (fixes height stacking bug and deformation)
+        if (OrigTransform := OriginalPropTransform?):
+            if(GiftBoxProp.TeleportTo[OrigTransform]){}
+        
         WaitKeyFrame: keyframe_delta = keyframe_delta
         {
             DeltaLocation := vector3{X:=0.0,Y:=0.0,Z:=0.0}
@@ -106,18 +121,25 @@ giftbox_device := class<concrete>(Inaugurable):
         }
 
         set GiftBoxAnimationKeyFrames = array{ WaitKeyFrame, UpMovementKeyFrame, DownMovementKeyFrame, DownMovementCompleteKeyFrame }
-        if (PropAnimController := GiftBoxProp.GetAnimationController[]):
-            PropAnimController.SetAnimation(GiftBoxAnimationKeyFrames, ?Mode := animation_mode.Loop)
-            PropAnimController.Play()
+        
+        spawn{SetupAnimation()}
 
         for (PlayerSpawner : PlayerSpawners):
             PlayerSpawner.SpawnedEvent.Subscribe(OnPlayerSpawned)
 
-        spawn{AsyncTickPerSecond()}
+        # FIX 2: Only spawn the tick loop if it's not already running
+        if (not TickLoopRunning?):
+            set TickLoopRunning = true
+            spawn{AsyncTickPerSecond()}
+
+    SetupAnimation()<suspends>:void=
+        if (PropAnimController := GiftBoxProp.GetAnimationController[]):
+            PropAnimController.SetAnimation(GiftBoxAnimationKeyFrames, ?Mode := animation_mode.Loop)
+            PropAnimController.Play()
 
     AsyncTickPerSecond()<suspends>:void=
         loop:
-            Sleep(1.0)
+            Sleep(1.0)  # FIX 2: Ensure exactly 1 second between ticks
 
             Players := owner.Players
             for (Player : Players, GiftBoxCanvas : canvas = GiftBoxCanvasPerAgent[Player]):
@@ -128,6 +150,7 @@ giftbox_device := class<concrete>(Inaugurable):
                     if (Duration > -1,
                     TextWidget : text_block = text_block[GiftBoxCanvas.Slots[TextIndex].Widget],
                     ImageWidget : texture_block = texture_block[GiftBoxCanvas.Slots[ImageIndex].Widget]):
+                        # FIX 2: Update the duration BEFORE checking if it's -1
                         if (set GiftBoxDurationsPerAgent[Player][I] = Duration-1){}
 
                         if ((Duration-1) = -1):
