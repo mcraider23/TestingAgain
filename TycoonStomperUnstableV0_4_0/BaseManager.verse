@@ -197,13 +197,12 @@ base<public>:=class<concrete><unique>(SuperInaugurable, Rebirthable, Runtime, St
                 UI := currency_ui{Player:=Player,  Configs:=UIConfig, owner:=Self}
                 UI.Create()
                 spawn{AwaitUIDestroy(UI)}
+                
+                # FIXED: Spawn delayed loading to avoid suspends effect error
                 if:
                     Base_Setup.PersistUnlocks?
                 then:
-                    for:
-                        AUnoock:AssociatedUnlocks
-                    do:
-                        Load(Self, AUnoock(0), AUnoock(1))
+                    spawn{DelayedLoadUnlocks(AssociatedUnlocks)}
                 else if:
                     DelidUnlocks[Player, Base_Setup.PersistenceCore]
                 
@@ -240,6 +239,30 @@ base<public>:=class<concrete><unique>(SuperInaugurable, Rebirthable, Runtime, St
                 
                 Base_Setup.HudConfig.OnFailurePlayer(Player)
                 Print("Base is already claimed or size limit was reached (Status: [== {CFR.ToStr()} ==]")
+
+    # NEW: Helper method to handle delayed loading with suspends
+    DelayedLoadUnlocks(AssociatedUnlocks:[]tuple(PurchaseableType, int))<suspends>:void=
+        Owner.Config.Superlog("=== PERSISTENCE LOADING START ===")
+        Owner.Config.Superlog("Associated Unlocks Length: {AssociatedUnlocks.Length}")
+        
+        for:
+            Unlock : AssociatedUnlocks
+        do:
+            Owner.Config.Superlog("  - Type: {Unlock(0).ToStr()}, Index: {Unlock(1)}")
+        
+        # FIXED: Add delay to ensure all systems are initialized before loading
+        Sleep(0.5)
+        
+        Owner.Config.Superlog("Loading {AssociatedUnlocks.Length} unlocks")
+        for:
+            AUnoock:AssociatedUnlocks
+        do:
+            Owner.Config.Superlog("Loading unlock: Type={AUnoock(0).ToStr()}, Index={AUnoock(1)}")
+            Load(Self, AUnoock(0), AUnoock(1))
+            # Small delay between loads to prevent race conditions
+            Sleep(0.05)
+        
+        Owner.Config.Superlog("=== PERSISTENCE LOADING COMPLETE ===")
 
     #Waits for a player to enter the base and attempts to claim it.
     AwaitBaseClaim(IX:int)<suspends>:void=
@@ -440,6 +463,4 @@ base<public>:=class<concrete><unique>(SuperInaugurable, Rebirthable, Runtime, St
                 "SizeLimit"=>"{SizeLimit}", 
                 "[Status]"=>"{Status.ToStr()}",
                 "[FailureReason]"=>"{CFR.ToStr()}"
-            }   
-           
-
+            }

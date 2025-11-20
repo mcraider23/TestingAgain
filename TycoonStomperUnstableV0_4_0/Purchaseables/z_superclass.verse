@@ -35,6 +35,7 @@ purchaseable<public>:=class<abstract>(Detailable, Hostable, SuperInaugurable, Re
     var CanLoad: logic = false
     var GlobalOriginProps : [TWC_unique_prop][]origin_prop = map{}
     var DefaultAltClaim<public>:logic=false
+    var IsLoadingFromPersistence: logic = false  # NEW: Track if loading from persistence
 
     var OnBoughtEvent <public> : event(agent) = event(agent){}
     var SetOwnerEvent <public> : event(base) = event(base){}
@@ -133,6 +134,7 @@ purchaseable<public>:=class<abstract>(Detailable, Hostable, SuperInaugurable, Re
         then:
             set CanLoad = true
             set IsPurchased = PurchasedStatus.NotPurchased
+            set IsLoadingFromPersistence = false  # Reset loading flag
             Purchase_Zone.Enable()
             Purchase_Zone.Show()
             spawn{SubHost()}
@@ -506,7 +508,7 @@ purchaseable<public>:=class<abstract>(Detailable, Hostable, SuperInaugurable, Re
     
     #Grants the player money and experience points on an interval
     OnGrantInterval(Agent:agent)<suspends>:void=
-        GlobalSuperlog("-Granting Money on Interval")
+        GlobalSuperlog("-Granting Money on Interval for {Name}")
         if(GA := GrantInterval?;  Owner := MaybeOwner?){if(Owner.MoneyLeague.Update[Owner, CurrencyToReceiveID, GrantAmount, GA]){GlobalSuperlog("Updated MoneyLeague using: {Name}")}}
         loop:
             if:
@@ -514,6 +516,8 @@ purchaseable<public>:=class<abstract>(Detailable, Hostable, SuperInaugurable, Re
                 Interval := GrantInterval?
                 Player : player = player[Agent]
                 Owner := MaybeOwner?
+                Player.IsActive[]  # FIXED: Check if player is still active
+                Owner.Players.Find[Player]  # FIXED: Check if player is still in base
                 Stats := PlayerStats := GetCoreStats[Player, Owner.Base_Setup.PersistenceCore]
                 MoneyToReceive := Stats.AssociatedCurrencies[CurrencyToReceiveID]
                 IsPurchased = PurchasedStatus.Purchased
@@ -522,7 +526,9 @@ purchaseable<public>:=class<abstract>(Detailable, Hostable, SuperInaugurable, Re
                 GrantMoney(Owner, Player, CurrencyToReceiveID, GrantAmount, BypassZone)   
                 
                 
-            else{GlobalSuperlog("No interval set for: {Name}; or interval is less than 0.0; returning..."); return}
+            else:
+                GlobalSuperlog("Grant interval stopped for {Name} - player inactive or not in base")
+                return
                     
         
 
@@ -644,6 +650,52 @@ purchaseable<public>:=class<abstract>(Detailable, Hostable, SuperInaugurable, Re
             SFX.OnEvent(Player)
             BillboardConfig.Hide()
             UpdateAssociatedUnlocks(Player, Ptype, MyIndex, Owner.Base_Setup.PersistenceCore)
+
+# UPDATED: Load from persistence without triggering purchase logic
+    LoadFromPersistence<public>():void=
+        if:
+            Owner := MaybeOwner?
+            CanLoad?
+            not IsLoadingFromPersistence?  # Prevent duplicate loads
+        then:
+            set IsLoadingFromPersistence = true
+            set CanLoad = false
+            set IsPurchased = PurchasedStatus.Purchased
+            
+            GlobalSuperlog("LoadFromPersistence START for {Name}")
+            
+            Purchase_Zone.Disable()
+            Purchase_Zone.Hide(false)
+            
+            # Unlock dependents
+            Result := UnlockDependents(Owner)
+            if(Result(1)?){GlobalSuperlog("When Unlocking all dependents, ({Result(0)}) failed to unlock")}
+            
+            # Start hosting (ManageHost will call Host which handles conveyors, droppers, etc.)
+            spawn{ManageHost()}
+            
+            # FIXED: Spawn delayed signal for props to show (no suspends in this function)
+            spawn{DelayedBegunHosting()}
+            
+            BillboardConfig.Hide()
+            
+            # Start grant interval if there's a player
+            if:
+                Player := Owner.Players[0]
+            then:
+                spawn{OnGrantInterval(Player)}
+                GlobalSuperlog("Started OnGrantInterval for {Name} with player")
+            else:
+                GlobalSuperlog("No player found for OnGrantInterval in {Name}")
+            
+            GlobalSuperlog("LoadFromPersistence COMPLETE for {Name}")
+
+    # NEW: Helper method to delay BegunHosting signal
+    DelayedBegunHosting<private>()<suspends>:void=
+        Sleep(0.2)
+        BegunHosting.Signal()
+        GlobalSuperlog("BegunHosting signal sent for {Name}")
+
     FirstBought(Agent:agent):void=
         if:
             Player := player[Agent]
@@ -787,26 +839,3 @@ fxpurchaseable<public>:=class<abstract>(purchaseable, ExpandedFX):
         
     #Custom class methods
     AsyncPlayFX(Time:float)<suspends>:void={PlayFX(); Sleep(Time); StopFX(); return}
-
-
-            
-    
-    
-
-
-
-
-
-
-            
-                
-
-
-
-
-
-
-        
-        
-        
-

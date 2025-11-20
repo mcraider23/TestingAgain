@@ -10,14 +10,9 @@ using { /Verse.org/Assets }
 using {cc}
 using{Super}
 <#
-█▀▄ █▀▀ █░█ █▀▀ █░░ █▀█ █▀█ █▀▀ █▀▄   █▄▄ █▄█   ▀█▀ █▀ ▄▀█ █▀█
-█▄▀ ██▄ ▀▄▀ ██▄ █▄▄ █▄█ █▀▀ ██▄ █▄▀   █▄█ ░█░   ░█░ ▄█ █▀█ █▀▄
-
-▄▀█ █░░ █░░   █▀█ █ █▀▀ █░█ ▀█▀ █▀   █▀█ █▀▀ █▀ █▀▀ █▀█ █░█ █▀▀ █▀▄
-█▀█ █▄▄ █▄▄   █▀▄ █ █▄█ █▀█ ░█░ ▄█   █▀▄ ██▄ ▄█ ██▄ █▀▄ ▀▄▀ ██▄ █▄▀
-
-█▀▄ █▀█   █▄░█ █▀█ ▀█▀   █▀ █▀▀ █░░ █░░
-█▄▀ █▄█   █░▀█ █▄█ ░█░   ▄█ ██▄ █▄▄ █▄▄
+Developed by TSAR
+ALL RIGHTS RESERVED
+DO NOT SELL
 #>
 
 currency_ui<public>:=class():
@@ -179,7 +174,7 @@ currency_ui<public>:=class():
                         Widget := ActiveCash
                         HorizontalAlignment := horizontal_alignment.Right
                         VerticalAlignment := vertical_alignment.Center
-                        Padding:=margin{Left:=11.0, Right:=40.0}
+                        Padding:=margin{Left:=11.0, Right:=60.0}
             
             if:
                 Config.ShowPerSecond?
@@ -242,7 +237,7 @@ currency_ui<public>:=class():
                             Padding:=margin{Right:=5.0}
                         overlay_slot:
                             Widget := text_block:
-                                DefaultText := S2M("🔄")  # Rebirth emoji
+                                DefaultText := S2M("💸")  # Rebirth emoji
                                 DefaultTextColor := color{R:=1.000000, G:=1.000000, B:=1.000000}
                             HorizontalAlignment := horizontal_alignment.Left
                             VerticalAlignment := vertical_alignment.Center
@@ -259,7 +254,7 @@ currency_ui<public>:=class():
                             Widget := RebirthText
                             HorizontalAlignment := horizontal_alignment.Right
                             VerticalAlignment := vertical_alignment.Center
-                            Padding:=margin{Left:=11.0, Right:=40.0}
+                            Padding:=margin{Left:=11.0, Right:=60.0}
                 HorizontalAlignment := horizontal_alignment.Fill
                 VerticalAlignment := vertical_alignment.Top
 
@@ -304,7 +299,7 @@ currency_ui<public>:=class():
                             Widget := IncomeBonusText
                             HorizontalAlignment := horizontal_alignment.Right
                             VerticalAlignment := vertical_alignment.Center
-                            Padding:=margin{Left:=11.0, Right:=40.0}
+                            Padding:=margin{Left:=11.0, Right:=60.0}
                 HorizontalAlignment := horizontal_alignment.Fill
                 VerticalAlignment := vertical_alignment.Top
 

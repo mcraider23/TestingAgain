@@ -180,15 +180,15 @@ HasZone(Base:base, ID:int)<decides><transacts>:void=
         
     }
 
+# UPDATED: Load from persistence using new LoadFromPersistence method
 Load<public>(B:base, Purchaseable:PurchaseableType, I:int):void=
-        if:
-            Player := B.Players[0]
-            PurchaseableData := FetchPurchaseableFromPtypeDex[Purchaseable, B, I]
-        then:
-            PurchaseableData(0).Load(Player)
-
-
-(Item:purchaseable).Load(Player:player):void={Item.OnBought(Player)}
+    if:
+        PurchaseableData := FetchPurchaseableFromPtypeDex[Purchaseable, B, I]
+    then:
+        PurchaseableData(0).LoadFromPersistence()
+        B.Owner.Config.Superlog("Loaded {PurchaseableData(1)} at index {I}")
+    else:
+        B.Owner.Config.Superlog("FAILED to load {Purchaseable.ToStr()} at index {I} - item not found")
 
         
 
