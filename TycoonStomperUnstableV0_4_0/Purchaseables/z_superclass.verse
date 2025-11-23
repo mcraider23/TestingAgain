@@ -311,7 +311,7 @@ purchaseable<public>:=class<abstract>(Detailable, Hostable, SuperInaugurable, Re
                     else if:
                         StartAs = Dependency.Locked
                     then:
-                        Print("Hiding {Name} for being locked")
+                        #Print("Hiding {Name} for being locked")
                         TWC.Hide(AnimationConfig)
 
                     race:

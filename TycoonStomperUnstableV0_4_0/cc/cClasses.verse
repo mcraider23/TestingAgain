@@ -82,14 +82,15 @@ Super<public>:=module{
                                                                                                                                                         CurrencyValue<public>():void={Print("You are using Project OST Free Edition - it falls under a copyleft license.", ?Duration:=10.0, ?Color:=NamedColors.Gold)}
 }
 
-# FIXED: Added Rebirthable interface to currency_config
+# FIXED: Added support for multiple collection zones with multiple displays
 currency_config <public>:=class<concrete><unique>(Inaugurable, Detailable, Rebirthable):
     @editable var Name : string = ""
     @editable var Display : billboard_device = billboard_device{}
-    @editable var MaybeCollectionZone : ?anyzone_or_atm = false
+    @editable var MaybeCollectionZone : ?anyzone_or_atm = false  # <-- Keep for backward compatibility
+    @editable var AdditionalCollectionZones : []anyzone_or_atm = array{}  # <-- New array for extra zones
+    @editable var AdditionalDisplays : []billboard_device = array{}  # <-- New array for extra displays
     @editable var VFX : vfx_main = vfx_main{}
     @editable var SFX : sfx_main = sfx_main{}
-    var CollectionZone : anyzone_or_atm = anyzone_or_atm{}
 
    
     var AmountToClaim : int = 0
@@ -102,38 +103,47 @@ currency_config <public>:=class<concrete><unique>(Inaugurable, Detailable, Rebir
     OnRebirth<override>():void=
         set AmountToClaim = 0
         Display.SetText(S2M("0"))
+        # Update all additional displays too
+        for(AdditionalDisplay : AdditionalDisplays):
+            AdditionalDisplay.SetText(S2M("0"))
         GlobalSuperlog("Currency {Name} reset to 0 on rebirth")
 
     Initialize<override>(Base:base):void=
-        if(Zone := MaybeCollectionZone?){set CollectionZone = Zone}
         set Owner = Base
-        CollectionZone.Initialize(Base, false)
-        spawn{AwaitClaim()}
+        
+        # Initialize the original zone if it exists
+        if(Zone := MaybeCollectionZone?):
+            Zone.Initialize(Base, false)
+            spawn{AwaitClaim(Zone)}
+        
+        # Initialize all additional collection zones
+        for(Zone : AdditionalCollectionZones):
+            Zone.Initialize(Base, false)
+            spawn{AwaitClaim(Zone)}
+        
         spawn{Manager()}
         VFX.Initialize(Base)
         SFX.Initialize(Base)
-
-        #Find the index where this currency is located in the base's currency list
-        
-
-        
 
     AddAwaitableCash(Amount:int)<transacts>:void=
         set AmountToClaim += Amount
     
     Manager()<suspends>:void=
         loop:
-            race:
-                AwaitClaim()
-                UpdateText()
-                
+            UpdateText()
 
     UpdateText()<suspends>:void=
         Sleep(1.0)
-        Display.SetText(S2M("{AmountToClaim.GetTrunc(Owner)}"))
+        TruncatedAmount := S2M("{AmountToClaim.GetTrunc(Owner)}")
+        Display.SetText(TruncatedAmount)
+        # Update all additional displays with same value
+        for(AdditionalDisplay : AdditionalDisplays):
+            AdditionalDisplay.SetText(TruncatedAmount)
         return
         
-    AwaitClaim()<suspends>:void=
+    # FIXED: Now accepts a specific zone parameter
+    AwaitClaim(CollectionZone:anyzone_or_atm)<suspends>:void=
+        loop:
             Agent := CollectionZone.PlayerEntersEvent.Await()
             if:
                 Player := player[Agent]
@@ -142,14 +152,14 @@ currency_config <public>:=class<concrete><unique>(Inaugurable, Detailable, Rebir
             then:
                 UpdateAssociatedCurrencies(Player, ID, PastCurrencyAmount+AmountToClaim, Owner.Base_Setup.PersistenceCore)
                 set AmountToClaim = 0
-                Display.SetText(S2M("{AmountToClaim.GetTrunc(Owner)}"))
+                TruncatedAmount := S2M("{AmountToClaim.GetTrunc(Owner)}")
+                Display.SetText(TruncatedAmount)
+                # Update all additional displays when currency is collected
+                for(AdditionalDisplay : AdditionalDisplays):
+                    AdditionalDisplay.SetText(TruncatedAmount)
                 VFX.OnEvent(Player)
                 SFX.OnEvent(Player)
                 CollectionZone.OnSuccess(Player, false)
-                return
-                
-                
-    
 
 
 anyzone_or_atm<public>:=class<concrete>(LogicalInaugurable, Toggleable):
