@@ -13,6 +13,7 @@ car_spawn_device := class(creative_device):
     var CurrentVehicle : ?fort_vehicle = false
     var CurrentAgent : ?agent = false
     var DespawnTimerActive : logic = false
+    var SomeoneInCar : logic = false  # NEW: Track if anyone is in the car
 
     OnBegin<override>()<suspends>:void =
         # Disable the spawner initially so the car isn't in the world
@@ -36,20 +37,24 @@ car_spawn_device := class(creative_device):
             # Assign the saved agent as the driver of the newly spawned vehicle
             CarSpawner.AssignDriver(Agent)
             set CurrentVehicle = option{Vehicle}
+            set SomeoneInCar = true  # Someone is now in the car
 
     OnAgentExits(Agent:agent):void =
-        if (TrackedAgent := CurrentAgent?):
-            if (TrackedAgent = Agent and DespawnTimerActive = false):
-                set DespawnTimerActive = true
-                spawn{DespawnVehicleAfterDelay()}
+        # FIXED: Start despawn timer when ANYONE exits, not just the original spawner
+        if (DespawnTimerActive = false):
+            set DespawnTimerActive = true
+            set SomeoneInCar = false
+            spawn{DespawnVehicleAfterDelay()}
 
     OnAgentEnters(Agent:agent):void =
-        # Cancel the despawn timer if the player re-enters the vehicle
+        # Cancel the despawn timer if anyone re-enters the vehicle
         set DespawnTimerActive = false
+        set SomeoneInCar = true
 
     DespawnVehicleAfterDelay()<suspends>:void =
         Sleep(10.0)
-        if (DespawnTimerActive = true):
+        # FIXED: Only despawn if timer is still active AND no one got back in
+        if (DespawnTimerActive = true, SomeoneInCar = false):
             if (Vehicle := CurrentVehicle?):
                 CarSpawner.DestroyVehicle()
                 set CurrentVehicle = false

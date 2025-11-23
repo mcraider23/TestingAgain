@@ -172,15 +172,27 @@ base<public>:=class<concrete><unique>(SuperInaugurable, Rebirthable, Runtime, St
         InitializeAgent(Agent)
             Print("Attempting to claim base")
             Base_Setup.BillBoardConfig.Instantiate()
+            
+            # FIXED: Check status BEFORE attempting claim
+            if(Status = ClaimStatus.Claimed):
+                if:
+                    Player := player[Agent]
+                then:
+                    Base_Setup.HudConfig.OnFailurePlayer(Player)
+                    Print("Base is already claimed")
+                return
+            
             if:
                 AttemptClaimBase[Agent]
-                Status = ClaimStatus.Unclaimed
                 Player := player[Agent]
                 TempStats := Owner.GetPlayerStats[Player]
                 TempStats.ClaimBase[Self]
                 PlayerStats := GetCoreStats[Player, Base_Setup.PersistenceCore]
                 AssociatedUnlocks := PlayerStats.AssociatedUnlocks
             then:
+                # VERIFICATION: Check team assignment worked
+                spawn{VerifyTeamAssignment(Player)}
+                
                 if:
                     not RootPlayer?
                 then:
@@ -240,6 +252,31 @@ base<public>:=class<concrete><unique>(SuperInaugurable, Rebirthable, Runtime, St
                 Base_Setup.HudConfig.OnFailurePlayer(Player)
                 Print("Base is already claimed or size limit was reached (Status: [== {CFR.ToStr()} ==]")
 
+    # NEW: Helper method to verify team assignment
+    VerifyTeamAssignment(Player:player)<suspends>:void=
+        Sleep(0.5)  # Give it a moment to complete
+        TC := Owner.GetPlayspace().GetTeamCollection()
+        Teams := TC.GetTeams()
+        if:
+            PlayerTeam := TC.GetTeam[Player]
+            Base_Setup.TeamToAddTo < Teams.Length
+            ExpectedTeam := Teams[Base_Setup.TeamToAddTo]
+        then:
+            if:
+                PlayerTeam = ExpectedTeam
+            then:
+                Owner.Config.Superlog("✓ TEAM VERIFIED: Player successfully assigned to team index {Base_Setup.TeamToAddTo} for base {Base_Setup.Name}")
+            else:
+                Owner.Config.Superlog("✗ TEAM MISMATCH: Player on WRONG team for base {Base_Setup.Name}!")
+                Owner.Config.Superlog("  Expected team index: {Base_Setup.TeamToAddTo}")
+                # Try to fix it by adding to team again
+                if(TC.AddToTeam[Player, ExpectedTeam]):
+                    Owner.Config.Superlog("  ✓ Fixed: Reassigned player to correct team")
+                else:
+                    Owner.Config.Superlog("  ✗ Failed to reassign player!")
+        else:
+            Owner.Config.Superlog("✗ TEAM ERROR: Could not get player's team or expected team!")
+
     # NEW: Helper method to handle delayed loading with suspends
     DelayedLoadUnlocks(AssociatedUnlocks:[]tuple(PurchaseableType, int))<suspends>:void=
         Owner.Config.Superlog("=== PERSISTENCE LOADING START ===")
@@ -283,18 +320,24 @@ base<public>:=class<concrete><unique>(SuperInaugurable, Rebirthable, Runtime, St
             UI.Destroy();
     #Attempts to claim the base.
     AttemptClaimBase(A:agent)<transacts><decides>:void=
-        Owner.Config.Superlog("=Attempting to claim base=")
+        Owner.Config.Superlog("=== ATTEMPTING TO CLAIM BASE ===")
+        Owner.Config.Superlog("Base: {Base_Setup.Name}")
+        Owner.Config.Superlog("Current Status: {Status.ToStr()}")
+        Owner.Config.Superlog("Current Players: {Players.Length}/{SizeLimit}")
+        
         if:
             Players.Length < SizeLimit
             Player := player[A]
         then:
             AddToTeam(Player)
-            Print("== Base Successfully Claimed ==")
+            set Status = ClaimStatus.Claimed  # FIXED: Set status immediately after adding
+            Owner.Config.Superlog("✓ Base Successfully Claimed!")
+            Owner.Config.Superlog("New Status: {Status.ToStr()}")
             
 
         else:
             set Status = ClaimStatus.Claimed
-            Owner.Config.Superlog("Setting status to claimed")
+            Owner.Config.Superlog("✗ Claim FAILED: Base already claimed or at size limit")
 
 
     AwaitRebirth()<suspends>:void=
@@ -326,7 +369,9 @@ base<public>:=class<concrete><unique>(SuperInaugurable, Rebirthable, Runtime, St
     
 
     OnRebirth<override>():void=
-        Owner.Config.Superlog("Attempting Rebirth")
+        Owner.Config.Superlog("=== STARTING REBIRTH PROCESS ===")
+        Owner.Config.Superlog("Current Status: {Status.ToStr()}")
+        Owner.Config.Superlog("Current Players: {Players.Length}")
 
         # FIXED: Reset all purchaseables (this will reset their props)
         (GetPurchaseArray()).RebirthList(Self)
@@ -338,10 +383,28 @@ base<public>:=class<concrete><unique>(SuperInaugurable, Rebirthable, Runtime, St
         }
 
         Base_Setup.PurchaseableConfigs.OnRebirth()
+        
+        # CRITICAL FIX: Set status to unclaimed FIRST
         set Status = ClaimStatus.Unclaimed
+        Owner.Config.Superlog("Status set to: {Status.ToStr()}")
+        
+        # CRITICAL FIX: Re-enable purchase zone with explicit status checks
+        Base_Setup.PurchaseableConfigs.Purchase_Zone.Enable()
         Base_Setup.PurchaseableConfigs.Purchase_Zone.Show()
+        Owner.Config.Superlog("Purchase zone re-enabled and shown")
+        
+        # CRITICAL FIX: Re-show and update billboard
+        Base_Setup.BillBoardConfig.Show()
+        Base_Setup.BillBoardConfig.Instantiate()
+        Owner.Config.Superlog("Billboard re-shown and instantiated")
+        
         set MoneyLeague = money_league{}
 
+        # Get team collection for resetting player teams
+        TC := Owner.GetPlayspace().GetTeamCollection()
+        Teams := TC.GetTeams()
+
+        # Process all players in the base
         for:
             Player:Players
             DelidCurrencies[Player, Base_Setup.PersistenceCore]
@@ -353,17 +416,37 @@ base<public>:=class<concrete><unique>(SuperInaugurable, Rebirthable, Runtime, St
             Rebirth(Player, Base_Setup.PersistenceCore)
             Base_Setup.RebirthConfig.HudConfig.OnSuccessfullPlayer(Player)
             Base_Setup.RebirthConfig.RebirthAccolade.Award(Player)
-            set Players = Players.RemoveAllElements(Player)
             
+            # FIXED: Move player to neutral team (Team 1, index 0) during rebirth
+            if:
+                Teams.Length > 0
+                NeutralTeam := Teams[0]
+            then:
+                if(TC.AddToTeam[Player, NeutralTeam]):
+                    Owner.Config.Superlog("Moved player to neutral team (index 0) during rebirth")
+                else:
+                    Owner.Config.Superlog("WARNING: Failed to move player to neutral team during rebirth")
+            
+            Owner.Config.Superlog("Processed rebirth for player")
+            
+        # CRITICAL FIX: Clear all player data
         set Players = array{}
         set RootPlayer = false
+        Owner.Config.Superlog("Players array cleared, RootPlayer cleared")
+        
+        # CRITICAL FIX: Add base back to unclaimed list
         set Owner.UnclaimedBases += array{Self}
+        Owner.Config.Superlog("Base added back to UnclaimedBases list. Total unclaimed: {Owner.UnclaimedBases.Length}")
+        
         if:
             tempid := CreateID[15]
             set UniqueID = tempid
         then:
             Owner.Config.Superlog("Base ID is {UniqueID}")
 
+        Owner.Config.Superlog("=== REBIRTH PROCESS COMPLETE ===")
+        Owner.Config.Superlog("Final Status: {Status.ToStr()}")
+        Owner.Config.Superlog("Final Players Count: {Players.Length}")
 
         return
 
@@ -429,16 +512,47 @@ base<public>:=class<concrete><unique>(SuperInaugurable, Rebirthable, Runtime, St
     #Returns the root player value for every player on the team as an array.
     #Adds a player to the team, if they aren't already on the Players list and the SizeLimit wont exceed.
     AddToTeam(Player:player)<transacts>:void=
+        Owner.Config.Superlog("=== ADDING PLAYER TO TEAM ===")
+        Owner.Config.Superlog("Base: {Base_Setup.Name}")
+        Owner.Config.Superlog("Target Team Index: {Base_Setup.TeamToAddTo}")
+        
         if:
-            not Player.IsOnTeam[]
             Players.Length < SizeLimit
         then:
-            set Players += array{Player}
             TC := Owner.GetPlayspace().GetTeamCollection()
             Teams := TC.GetTeams()
-            if(TC.AddToTeam[Player, Teams[Base_Setup.TeamToAddTo]]){}
+            
+            Owner.Config.Superlog("Total teams available: {Teams.Length}")
+            
+            # Add to base's Players array
+            set Players += array{Player}
+            Owner.Config.Superlog("Added to base's Players array. New count: {Players.Length}")
+            
+            # CRITICAL FIX: Add to the correct Fortnite team with verification
+            # Note: AddToTeam automatically handles moving from previous team
+            if:
+                Base_Setup.TeamToAddTo < Teams.Length
+                TargetTeam := Teams[Base_Setup.TeamToAddTo]
+            then:
+                if:
+                    TC.AddToTeam[Player, TargetTeam]
+                then:
+                    Owner.Config.Superlog("✓ Successfully added player to team index {Base_Setup.TeamToAddTo}")
+                    
+                    # Double-check it worked
+                    if:
+                        VerifyTeam := TC.GetTeam[Player]
+                        VerifyTeam = TargetTeam
+                    then:
+                        Owner.Config.Superlog("✓ VERIFIED: Player is now on correct team!")
+                    else:
+                        Owner.Config.Superlog("✗ WARNING: Team verification failed!")
+                else:
+                    Owner.Config.Superlog("✗ CRITICAL ERROR: AddToTeam FAILED for team index {Base_Setup.TeamToAddTo}")
+            else:
+                Owner.Config.Superlog("✗ CRITICAL ERROR: Invalid team index {Base_Setup.TeamToAddTo} (max: {Teams.Length-1})")
         else:
-            Owner.Config.Superlog("Player is already on the team or size limit was reached")
+            Owner.Config.Superlog("✗ Cannot add player: Size limit reached ({Players.Length}/{SizeLimit})")
 
     #Checks if a player is on the team and returns the index of the player in the Players list.
     (Player:player).IsOnTeam()<transacts><decides>:int={I := Players.Find[Player]; I}

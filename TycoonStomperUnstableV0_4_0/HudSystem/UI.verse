@@ -289,7 +289,7 @@ currency_ui<public>:=class():
                             Padding:=margin{Left:=11.0, Right:=35.0}
                         overlay_slot:
                             Widget := text_block:
-                                DefaultText := S2M("Bonus")
+                                DefaultText := S2M("Bonus Income")
                                 DefaultTextOpacity := 0.75
                                 DefaultTextColor := color{R:=1.000000, G:=1.000000, B:=1.000000}
                             HorizontalAlignment := horizontal_alignment.Center

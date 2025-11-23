@@ -283,7 +283,7 @@ purchaseable<public>:=class<abstract>(Detailable, Hostable, SuperInaugurable, Re
                         TimeOut := UsingTimeout[GetSession()]
                         set SetTimeOut = TimeOut
                     then:
-                        GlobalSuperlog("Using Timeout for {SetTimeOut}")
+                        #GlobalSuperlog("Using Timeout for {SetTimeOut}")
                     if:
                         StartAs = Dependency.Unlocked
                     then:

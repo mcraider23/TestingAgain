@@ -10,15 +10,27 @@ playerstats:=class<final><unique>(Rebirthable):
 
 
     OnLeave():void=
+        GlobalSuperlog("=== PLAYER LEAVING - OnLeave Called ===")
         if:
             ClaimedBase := HasClaimedBase?
-            ClaimedBase.RootPlayer? = Player
         then:
-            ClaimedBase.OnRebirth()
-            RemoveRebirth(Player, ClaimedBase.Base_Setup.PersistenceCore)
+            GlobalSuperlog("Player had claimed base: {ClaimedBase.Base_Setup.Name}")
+            
+            # Check if player is root player
+            if:
+                RootPlayerCheck := ClaimedBase.RootPlayer?
+                RootPlayerCheck = Player
+            then:
+                GlobalSuperlog("Player was root player - triggering base rebirth")
+                ClaimedBase.OnRebirth()
+                RemoveRebirth(Player, ClaimedBase.Base_Setup.PersistenceCore)
+            else:
+                GlobalSuperlog("Player was not root player - no rebirth triggered")
         else:
-            GlobalSuperlog("Failed X2")
+            GlobalSuperlog("Player had not claimed any base")
+            
         set HasClaimedBase = false
+        GlobalSuperlog("=== OnLeave Complete ===")
 
     OnRebirth<override>():void=
         if:
@@ -71,7 +83,7 @@ ChangeCoreSave(Src:[int]core_save, id:int, coresave:core_save)<transacts>:[int]c
 
 RemoveRebirth(P:player, CoreSaveID:int)<transacts>:void=
     
-    GlobalSuperlog("Rebirting Player")
+    GlobalSuperlog("Removing Rebirth for player")
     if:
         P.IsActive[]
         Map := PlayerProfileDataMap[P]
@@ -95,7 +107,7 @@ RemoveRebirth(P:player, CoreSaveID:int)<transacts>:void=
 
 Rebirth(P:player, CoreSaveID:int)<transacts>:void=
     
-    GlobalSuperlog("Rebirting Player")
+    GlobalSuperlog("Rebirthing Player")
     if:
         P.IsActive[]
         Map := PlayerProfileDataMap[P]
@@ -234,4 +246,3 @@ GetCoreStats(Agent:agent, CoreStatsID:int)<decides><transacts>:core_save=
         then:
         PlayerStats.CoreSaves[CoreStatsID]
     }
-         
